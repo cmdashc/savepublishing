@@ -3,6 +3,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { JSDOM } from 'jsdom';
 import { describe, expect, it } from 'vitest';
+import { MENU_ATTR, type ShareDeps } from '../src/share/targets.js';
 import { isActive, setup, SPAN_ATTR, teardown } from '../src/ui/overlay.js';
 
 const fixtureDir = join(dirname(fileURLToPath(import.meta.url)), 'fixtures');
@@ -85,6 +86,84 @@ describe('overlay hover', () => {
 
     spans[0]!.dispatchEvent(new window.MouseEvent('mouseout', { bubbles: true }));
     for (const s of spans) expect(s.classList.contains('ql-hover')).toBe(false);
+  });
+});
+
+describe('overlay share flow', () => {
+  function fakeDeps(): ShareDeps & { opened: string[] } {
+    const opened: string[] = [];
+    return {
+      opened,
+      openURL: (url) => {
+        opened.push(url);
+      },
+      copy: async () => {},
+      getInstance: async () => undefined,
+      setInstance: async () => {},
+      promptInstance: () => null,
+    };
+  }
+
+  it('clicking a sentence opens the menu; a target posts quote + fragment URL', async () => {
+    const { window } = new JSDOM(
+      '<body><p>Unique prose sentence here. And a second one follows.</p></body>',
+      { url: 'https://example.com/article' },
+    );
+    const doc = window.document;
+    const deps = fakeDeps();
+    setup(doc, { onClose: noop, deps });
+
+    const span = doc.querySelector(`span[${SPAN_ATTR}="0"]`)!;
+    span.dispatchEvent(new window.MouseEvent('click', { bubbles: true, cancelable: true }));
+
+    const menu = doc.querySelector(`[${MENU_ATTR}]`);
+    expect(menu).not.toBeNull();
+    const x = menu!.shadowRoot!.querySelector('button.item') as HTMLButtonElement;
+    x.click();
+    expect(deps.opened).toHaveLength(1);
+    expect(deps.opened[0]).toContain('https://x.com/intent/post?text=');
+    expect(decodeURIComponent(deps.opened[0]!)).toContain('“Unique prose sentence here.”');
+    expect(decodeURIComponent(deps.opened[0]!)).toContain(
+      'https://example.com/article#:~:text=Unique%20prose%20sentence%20here.',
+    );
+  });
+
+  it('prevents navigation when the sentence sits inside a page link', () => {
+    const { window } = new JSDOM(
+      '<body><p>Before text flows along for quite some time in this rather longer paragraph. <a href="/away">Linked words continue the story here.</a></p></body>',
+      { url: 'https://example.com/article' },
+    );
+    const doc = window.document;
+    setup(doc, { onClose: noop, deps: fakeDeps() });
+
+    const inLink = doc.querySelector(`a span[${SPAN_ATTR}]`);
+    expect(inLink).not.toBeNull();
+    const event = new window.MouseEvent('click', { bubbles: true, cancelable: true });
+    inLink!.dispatchEvent(event);
+    expect(event.defaultPrevented).toBe(true);
+    expect(doc.querySelector(`[${MENU_ATTR}]`)).not.toBeNull();
+  });
+
+  it('Escape and outside clicks dismiss the menu', () => {
+    const { window } = new JSDOM('<body><p>Some prose sentence here.</p><div id="out">x</div></body>', {
+      url: 'https://example.com/article',
+    });
+    const doc = window.document;
+    setup(doc, { onClose: noop, deps: fakeDeps() });
+
+    const span = doc.querySelector(`span[${SPAN_ATTR}]`)!;
+    span.dispatchEvent(new window.MouseEvent('click', { bubbles: true, cancelable: true }));
+    expect(doc.querySelector(`[${MENU_ATTR}]`)).not.toBeNull();
+
+    doc.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Escape' }));
+    expect(doc.querySelector(`[${MENU_ATTR}]`)).toBeNull();
+
+    span.dispatchEvent(new window.MouseEvent('click', { bubbles: true, cancelable: true }));
+    expect(doc.querySelector(`[${MENU_ATTR}]`)).not.toBeNull();
+    doc.getElementById('out')!.dispatchEvent(
+      new window.MouseEvent('click', { bubbles: true, cancelable: true }),
+    );
+    expect(doc.querySelector(`[${MENU_ATTR}]`)).toBeNull();
   });
 });
 

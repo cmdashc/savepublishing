@@ -6,6 +6,14 @@
 
 import { ELEMENT_NODE, TEXT_NODE } from '../extract/classify.js';
 import { extractSentences } from '../extract/ranges.js';
+import { lastWords, quoteURL } from '../share/fragment.js';
+import {
+  closeShareMenu,
+  defaultDeps,
+  MENU_ATTR,
+  shareSentence,
+  type ShareDeps,
+} from '../share/targets.js';
 import { createToolbar, TOOLBAR_ATTR } from './toolbar.js';
 
 export const SPAN_ATTR = 'data-ql';
@@ -32,6 +40,8 @@ export interface OverlayState {
 interface Handlers {
   over: (e: Event) => void;
   out: (e: Event) => void;
+  click: (e: Event) => void;
+  key: (e: Event) => void;
 }
 
 // Per-document bookkeeping that must survive until teardown. Keyed by
@@ -110,6 +120,8 @@ export function isActive(doc: Document): boolean {
 
 export interface SetupOptions {
   onClose: () => void;
+  /** Share-environment overrides; defaults to the real window/chrome. */
+  deps?: ShareDeps;
 }
 
 export function setup(doc: Document, opts: SetupOptions): OverlayState {
@@ -137,6 +149,12 @@ export function setup(doc: Document, opts: SetupOptions): OverlayState {
   style.textContent = PAGE_CSS;
   (doc.head ?? doc.documentElement).appendChild(style);
 
+  const state: OverlayState = { sentences: boundaries.map((b) => b.sentence) };
+  overlayState.set(doc, state);
+
+  const deps =
+    opts.deps ?? defaultDeps(doc.defaultView as unknown as Window & typeof globalThis);
+
   // A sentence may span several wrappers (inline markup breaks it up), so
   // hovering any of them lights up the whole sentence.
   const handlers: Handlers = {
@@ -154,19 +172,48 @@ export function setup(doc: Document, opts: SetupOptions): OverlayState {
         s.classList.remove(HOVER_CLASS);
       }
     },
+    // Capture phase, so a wrapped sentence inside the page's own <a> shares
+    // instead of navigating. Clicks inside our menu/toolbar pass through to
+    // their own handlers; clicks anywhere else dismiss the menu.
+    click: (e) => {
+      const target = e.target as Node | null;
+      if (
+        target &&
+        target.nodeType === ELEMENT_NODE &&
+        (target as Element).closest(`[${MENU_ATTR}], [${TOOLBAR_ATTR}]`)
+      ) {
+        return;
+      }
+      const span = targetSpan(e);
+      if (!span) {
+        closeShareMenu(doc);
+        return;
+      }
+      e.preventDefault();
+      e.stopPropagation();
+      const id = Number(span.getAttribute(SPAN_ATTR));
+      const sentence = state.sentences[id];
+      if (sentence === undefined) return;
+      const prefix = id > 0 ? lastWords(state.sentences[id - 1]!, 5) : undefined;
+      const url = quoteURL(doc, sentence, prefix);
+      void shareSentence(doc, { sentence, url, anchor: span, deps });
+    },
+    key: (e) => {
+      if ((e as KeyboardEvent).key === 'Escape') closeShareMenu(doc);
+    },
   };
   doc.addEventListener('mouseover', handlers.over);
   doc.addEventListener('mouseout', handlers.out);
+  doc.addEventListener('click', handlers.click, true);
+  doc.addEventListener('keydown', handlers.key);
   hoverHandlers.set(doc, handlers);
-
-  const state: OverlayState = { sentences: boundaries.map((b) => b.sentence) };
-  overlayState.set(doc, state);
 
   createToolbar(doc, { count: state.sentences.length, onClose: opts.onClose });
   return state;
 }
 
 export function teardown(doc: Document): void {
+  closeShareMenu(doc);
   doc.querySelector(`[${TOOLBAR_ATTR}]`)?.remove();
   doc.querySelector(`style[${STYLE_ATTR}]`)?.remove();
 
@@ -184,6 +231,8 @@ export function teardown(doc: Document): void {
   if (handlers) {
     doc.removeEventListener('mouseover', handlers.over);
     doc.removeEventListener('mouseout', handlers.out);
+    doc.removeEventListener('click', handlers.click, true);
+    doc.removeEventListener('keydown', handlers.key);
     hoverHandlers.delete(doc);
   }
   overlayState.delete(doc);
