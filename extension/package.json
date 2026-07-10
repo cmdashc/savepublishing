@@ -1,15 +1,16 @@
 {
-  "name": "savepublishing",
+  "name": "quotelink",
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Narrative-text extraction core for the SavePublishing extension.",
+  "description": "Quotelink (working title): click a sentence in any article, share it with attribution. MV3 revival of the SavePublishing bookmarklet.",
   "scripts": {
-    "build": "esbuild src/index.ts --bundle --format=esm --outfile=dist/index.js",
+    "build": "node build.mjs",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
+    "@types/chrome": "^0.2.2",
     "@types/jsdom": "^28.0.3",
     "@types/node": "^22.0.0",
     "esbuild": "^0.25.0",

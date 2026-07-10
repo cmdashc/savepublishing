@@ -13,15 +13,33 @@ const segmenter = new Intl.Segmenter('en', { granularity: 'sentence' });
 const ABBREVIATION_RE =
   /\b(?:Mr|Mrs|Ms|Dr|Prof|Sen|Rep|Gov|Gen|Lt|Col|Sgt|Capt|Rev|Hon|St|No)\.\s*$/;
 
-export function sentences(text: string): string[] {
-  const out: string[] = [];
-  for (const { segment } of segmenter.segment(text)) {
+export interface SentenceSpan {
+  /** Start index into the input text (inclusive). */
+  start: number;
+  /** End index into the input text (exclusive). */
+  end: number;
+  /** Raw slice of the input: text.slice(start, end). */
+  text: string;
+}
+
+// Index spans of the sentences within `text`, abbreviation-merged but
+// otherwise untrimmed, so callers can map them back onto their source
+// (ranges.ts maps them onto DOM text nodes).
+export function sentenceSpans(text: string): SentenceSpan[] {
+  const out: { start: number; end: number }[] = [];
+  for (const { segment, index } of segmenter.segment(text)) {
     const prev = out[out.length - 1];
-    if (prev !== undefined && ABBREVIATION_RE.test(prev)) {
-      out[out.length - 1] = prev + segment;
+    if (prev !== undefined && ABBREVIATION_RE.test(text.slice(prev.start, prev.end))) {
+      prev.end = index + segment.length;
     } else if (segment.trim() !== '') {
-      out.push(segment);
+      out.push({ start: index, end: index + segment.length });
     }
   }
-  return out.map((s) => s.trim().replace(/\s+/g, ' ')).filter((s) => s !== '');
+  return out.map(({ start, end }) => ({ start, end, text: text.slice(start, end) }));
+}
+
+export function sentences(text: string): string[] {
+  return sentenceSpans(text)
+    .map((s) => s.text.trim().replace(/\s+/g, ' '))
+    .filter((s) => s !== '');
 }
