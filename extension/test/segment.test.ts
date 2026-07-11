@@ -53,4 +53,13 @@ describe('sentences', () => {
     expect(sentences('')).toEqual([]);
     expect(sentences('  \n\t ')).toEqual([]);
   });
+
+  it('splits a standalone "No." from the sentence that follows it', () => {
+    // "No" is not in the abbreviation suppression list: unlike "Mr."/"Dr.",
+    // it's a common complete sentence in dialogue, and merging it with the
+    // next sentence would be wrong.
+    expect(
+      sentences("Was he home? No. He'd already left."),
+    ).toEqual(["Was he home?", 'No.', "He'd already left."]);
+  });
 });

@@ -10,8 +10,13 @@ const segmenter = new Intl.Segmenter('en', { granularity: 'sentence' });
 // rule got this right). Segments ending in one of these title/style
 // abbreviations are rejoined with the segment that follows. Titles only —
 // they essentially never end a real sentence.
+//
+// "No" is deliberately excluded: unlike the others, it's a common
+// standalone sentence in dialogue/narrative ("Was he home? No. He'd already
+// left."), so suppressing the break after it would wrongly glue two
+// sentences together.
 const ABBREVIATION_RE =
-  /\b(?:Mr|Mrs|Ms|Dr|Prof|Sen|Rep|Gov|Gen|Lt|Col|Sgt|Capt|Rev|Hon|St|No)\.\s*$/;
+  /\b(?:Mr|Mrs|Ms|Dr|Prof|Sen|Rep|Gov|Gen|Lt|Col|Sgt|Capt|Rev|Hon|St)\.\s*$/;
 
 export interface SentenceSpan {
   /** Start index into the input text (inclusive). */
