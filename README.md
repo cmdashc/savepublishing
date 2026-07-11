@@ -1,5 +1,12 @@
 # SavePublishing.com
 
+> **2026 status:** the bookmarklet described below is retired. The actively
+> developed successor is the Manifest V3 browser extension in
+> [`extension/`](extension/) (Chrome and Firefox) — see
+> [`PLAN.md`](PLAN.md) for the rewrite's design and roadmap.
+> `htdocs/coffee/` (the CoffeeScript source) and `htdocs/js/` (its compiled
+> output) are kept for history but are frozen, not developed against.
+
 ## What is this supposed to do?
 
 SavePublishing is a bookmarklet, mostly in CoffeeScript, that looks at a web page and decides which statements are tweetable. It does this by length. The sentences are turned into links.
