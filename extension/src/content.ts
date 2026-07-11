@@ -1,6 +1,6 @@
-// Content-script entry: the only file that touches chrome.* in the page
-// context. All real behavior lives in ui/overlay.ts (testable in jsdom);
-// this is just the toggle glue.
+// Content-script entry: the only file that touches the extension APIs in
+// the page context. All real behavior lives in ui/overlay.ts (testable in
+// jsdom); this is just the toggle glue.
 //
 // Lifecycle: background.ts pings the tab with ql-toggle; if nobody answers,
 // it injects this bundle, which activates immediately and starts listening.
@@ -8,6 +8,7 @@
 // so a re-injected script after an extension reload can still tear down
 // leftovers from its dead predecessor.
 
+import { browserAPI } from './browserAPI.js';
 import { isActive, setup, teardown } from './ui/overlay.js';
 
 declare global {
@@ -28,7 +29,7 @@ function toggle(): void {
 
 if (!window.__quotelinkWired) {
   window.__quotelinkWired = true;
-  chrome.runtime.onMessage.addListener((message: unknown) => {
+  browserAPI().runtime.onMessage.addListener((message: unknown) => {
     if ((message as { type?: string } | null)?.type === TOGGLE_MESSAGE) toggle();
   });
   toggle();

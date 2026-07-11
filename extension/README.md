@@ -27,6 +27,18 @@ npm run typecheck
 4. Pin the icon if you like — it only gets access to a tab when you click it
    (`activeTab`; no host permissions)
 
+## Load it in Firefox
+
+1. `npm install && npm run build`
+2. Open `about:debugging#/runtime/this-firefox`
+3. **Load Temporary Add-on…** → pick `extension/dist/manifest.json`
+4. It unloads when Firefox closes — reload it the same way after a rebuild
+
+Same codebase, same `manifest.json`: Firefox reads `browser_specific_settings`
+(Chrome ignores it) and `background.scripts` (Chrome ignores it, uses
+`service_worker`); `src/browserAPI.ts` prefers the Promise-native `browser.*`
+global Firefox provides over `chrome.*`, so no polyfill is needed.
+
 ## Manual QA script
 
 1. Open a news article (NYT, Guardian, a Substack…). Click the extension icon:

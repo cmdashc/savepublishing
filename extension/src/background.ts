@@ -4,14 +4,17 @@
 // injected-tab bookkeeping — the DOM and the message channel are the state,
 // so this survives service-worker suspension.
 
+import { browserAPI } from './browserAPI.js';
+
 const TOGGLE_MESSAGE = 'ql-toggle';
 
 async function toggleInTab(tabId: number): Promise<void> {
+  const api = browserAPI();
   try {
-    await chrome.tabs.sendMessage(tabId, { type: TOGGLE_MESSAGE });
+    await api.tabs.sendMessage(tabId, { type: TOGGLE_MESSAGE });
   } catch {
     try {
-      await chrome.scripting.executeScript({
+      await api.scripting.executeScript({
         target: { tabId },
         files: ['content.js'],
       });
@@ -22,6 +25,6 @@ async function toggleInTab(tabId: number): Promise<void> {
   }
 }
 
-chrome.action.onClicked.addListener((tab) => {
+browserAPI().action.onClicked.addListener((tab) => {
   if (tab.id !== undefined) void toggleInTab(tab.id);
 });

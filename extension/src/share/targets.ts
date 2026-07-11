@@ -1,8 +1,10 @@
 // Share targets: navigator.share when the platform has it, otherwise a
 // small anchored menu of intent URLs — the 2026 equivalent of the old
 // twitter.com/intent/tweet links. URL builders are pure; everything
-// environment-shaped (window.open, clipboard, chrome.storage, prompt) comes
-// in through ShareDeps so tests can fake it.
+// environment-shaped (window.open, clipboard, extension storage, prompt)
+// comes in through ShareDeps so tests can fake it.
+
+import { browserAPI } from '../browserAPI.js';
 
 export const MENU_ATTR = 'data-ql-menu';
 
@@ -193,9 +195,10 @@ export async function shareSentence(
   ]);
 }
 
-// The real environment, assembled at the content-script edge. chrome.storage
-// is referenced lazily so this module can load in test environments where
-// `chrome` does not exist.
+// The real environment, assembled at the content-script edge. The storage
+// API is referenced lazily (via browserAPI(), inside these closures) so
+// this module can load in test environments where no extension globals
+// exist, and so it runs unmodified in both Chrome and Firefox.
 export function defaultDeps(win: Window & typeof globalThis): ShareDeps {
   const nav = win.navigator;
   return {
@@ -204,11 +207,12 @@ export function defaultDeps(win: Window & typeof globalThis): ShareDeps {
     },
     copy: (text) => nav.clipboard.writeText(text),
     getInstance: async () => {
-      const got = await chrome.storage.sync.get('mastodonInstance');
+      const got = await browserAPI().storage.sync.get('mastodonInstance');
       const value = got['mastodonInstance'];
       return typeof value === 'string' ? value : undefined;
     },
-    setInstance: (instance) => chrome.storage.sync.set({ mastodonInstance: instance }),
+    setInstance: (instance) =>
+      browserAPI().storage.sync.set({ mastodonInstance: instance }),
     promptInstance: () =>
       win.prompt('Your Mastodon instance (e.g. mastodon.social):'),
     nativeShare: typeof nav.share === 'function' ? (data) => nav.share(data) : undefined,
