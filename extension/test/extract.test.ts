@@ -116,6 +116,33 @@ describe.each([
     absent: [/^LEAVES OF GRASS$/, /^By Walt Whitman$/],
     bounds: [3500, 5000],
   },
+  {
+    fixture: 'wikipedia.html',
+    present:
+      'A bookmarklet is a bookmark stored in a web browser that contains JavaScript commands that add new features to the browser.',
+    absent: ['This page was last edited on', 'Wikipedia® is a registered trademark'],
+    bounds: [100, 170],
+  },
+  {
+    fixture: 'ghost_blog.html',
+    present: 'Great formatting will help your content get read more often and more completely.',
+    // "Ghost Logo" is an <svg><title> a11y label on the site's own logo icon.
+    absent: ['Ghost Logo', 'Your email'],
+    bounds: [100, 160],
+  },
+  {
+    fixture: 'substack.html',
+    present: 'The point is: the media rarely lies explicitly and directly.',
+    absent: ['Type your email', 'Ready for more?'],
+    bounds: [100, 180],
+  },
+  {
+    fixture: 'paywalled.html',
+    present:
+      'A decade and change ago, as the world woke up to the catastrophe of climate change, campus activists were looking for ways to heal the environment at scale.',
+    absent: ['Give a Gift', 'Latest Issue'],
+    bounds: [60, 110],
+  },
 ] as const)('$fixture', ({ fixture, present, absent, bounds }) => {
   const runs = runsOf(loadFixture(fixture));
   const texts = runs.map((r) => r.text);

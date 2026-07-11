@@ -15,10 +15,26 @@ export const TEXTISH_ELEMENTS = new Set([
   'BR',
 ]);
 
-// Elements that never contain narrative text worth extracting.
+// Elements that never contain narrative text worth extracting. NAV and
+// FOOTER are semantic-HTML5 landmarks the original 2012 bookmarklet
+// predates (its class/id-based nav detection, ported as isNavLike below,
+// was never actually reachable — see the comment on isGoodLink); sites
+// built since (Wikipedia's <footer id="footer"> among them) rely on the
+// tags themselves rather than a "nav"/"footer" class, so this is a
+// tag-name check, not a classname one, and is deliberately narrow: unlike
+// <footer>/<nav>, a <header> or <aside> occasionally does hold real prose
+// (a byline, a pull-quote), so those are left to the link-ratio check.
+// 'svg' is deliberately lowercase: elements in the SVG namespace (icon
+// sprites/logos inlined in the body, common on modern sites) keep their
+// authored-case nodeName instead of being uppercased like HTML elements,
+// so it doesn't match here as 'SVG' would. Excluding the root is enough —
+// nothing inside an icon's <style>/<title>/<path> is narrative text, and
+// without this, their loose text nodes (a CSS rule, an a11y <title> label)
+// get picked up as if they were prose, since isTextish only checks
+// nodeType for text nodes and doesn't otherwise know it's inside an icon.
 export const IRRELEVANT_ELEMENTS = new Set([
   'IMG', 'OBJECT', 'EMBED', 'IFRAME', 'SCRIPT', 'INPUT', 'TEXTAREA', 'HEAD',
-  'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'STYLE', 'LINK',
+  'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'STYLE', 'LINK', 'NAV', 'FOOTER', 'svg',
 ]);
 
 // Container elements that, when carrying a nav-like class or id, are treated

@@ -124,4 +124,24 @@ describe('isUseful', () => {
     expect(isUseful(el('<a href="#">bare link</a>'))).toBe(false);
     expect(isUseful(el('<div><p>Real prose lives here.</p></div>'))).toBe(true);
   });
+
+  it('rejects <footer> and <nav> landmarks regardless of class/id', () => {
+    // Unlike DIV/UL/OL/LI/P, these are excluded by tag name alone (see
+    // classify.ts's comment on isNavLike being unreachable) — a real site's
+    // <footer id="footer"> with no "nav"-ish classname still must not leak.
+    expect(isUseful(el('<footer id="footer">Copyright 2026.</footer>'))).toBe(false);
+    expect(isUseful(el('<nav><a href="#">Home</a></nav>'))).toBe(false);
+  });
+
+  it('rejects inline SVG icons, whose namespaced nodeName stays lowercase', () => {
+    // A <style> or <title> nested in an SVG icon (a logo, common on real
+    // sites) doesn't match 'STYLE'/'H1'.. in IRRELEVANT_ELEMENTS because
+    // SVG-namespace elements keep their authored lowercase nodeName instead
+    // of being uppercased like HTML elements — without the 'svg' entry,
+    // the icon's <style> text or <title> a11y label leaks in as if it were
+    // prose (see the ghost_blog.html fixture, which has exactly this).
+    const svg = el('<svg><title>Logo</title><style>.a{fill:red}</style></svg>');
+    expect(svg.nodeName).toBe('svg');
+    expect(isUseful(svg)).toBe(false);
+  });
 });
